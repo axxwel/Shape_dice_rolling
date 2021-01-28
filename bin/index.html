@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8"/>
+	<title>ShapeDiceRolling</title>
+	<meta name="description" content="" />
+	
+	<script src="js/swfobject.js"></script>
+	
+	<script>
+		var flashvars = {
+		};
+		var params = {
+			menu: "false",
+			scale: "noScale",
+			allowFullscreen: "true",
+			allowScriptAccess: "always",
+			bgcolor: "",
+			wmode: "direct" // can cause issues with FP settings & webcam
+		};
+		var attributes = {
+			id:"ShapeDiceRolling"
+		};
+		swfobject.embedSWF(
+			"ShapeDiceRolling.swf", 
+			"altContent", "100%", "100%", "10.0.0", 
+			"expressInstall.swf", 
+			flashvars, params, attributes);
+	</script>
+	
+	<script>
+//INIT FACEBOOK========================================================================================================
+		window.fbAsyncInit = function() {
+			// init the FB JS SDK
+			initFB();
+			// Additional initialization code such as adding Event Listeners goes here
+		};
+		// Load the SDK's source Asynchronously
+		// Note that the debug version is being actively developed and 
+		// might contain some type checks that are overly strict. 
+		// Please report such bugs using the bugs tool.
+		(function(d, debug){
+			var js, id = 'facebook-jssdk', ref = d.getElementsByTagName('script')[0];
+			if (d.getElementById(id)) {return;}
+			js = d.createElement('script'); js.id = id; js.async = true;
+			js.src = "//connect.facebook.net/en_US/all" + (debug ? "/debug" : "") + ".js";
+			ref.parentNode.insertBefore(js, ref);
+		}(document, /*debug*/ false));
+		
+		function initFB(){
+			FB.init({
+				appId : '1467818153434802', // App ID from the App Dashboard
+				channelUrl : 'www.blackmountainstudio.fr/ShapeDiceRolling/channel.html', //Channel File for x-domain communication,
+				frictionlessRequests : true,
+				status : true, // check the login status upon init?
+				version:"v2.0",
+				cookie : true, // set sessions cookies to allow your server to access the session?
+				xfbml  : true,  // parse XFBML tags on this page?
+				
+			});
+		}
+		function logFB(){
+			FB.login(function(response) {
+				if (response.authResponse) {
+					//console.log('init');
+					getInfoUser();
+				} else {
+					console.log('User cancelled login or did not fully authorize.');
+					RedirectionPage();
+				}
+			}
+			//portée d'autorisation;
+			);
+		}
+		function checkFB(){
+			FB.getLoginStatus(function(response) {
+				if (response.status === 'connected') {
+					//console.log('conected');
+					getInfoUser();
+				}
+				else if (response.status === 'not_authorized') {
+					//console.log('not_authorized');
+					logFB();
+				}else{
+					//console.log('not_logged');
+					connectFB();
+				}
+			});
+		}
+		
+//GET INFO====================================================================================
+		function getInfoUser(){
+			//console.log('getInfoUser');
+			FB.api('/me', function(response) {
+				if(response && !response.error){
+					document.getElementById("ShapeDiceRolling").retourFBme(response);
+				}
+			});
+			FB.api('/me/friends', function(response) {
+				if(response && !response.error){
+					document.getElementById("ShapeDiceRolling").retourFBfriends(response);
+				}
+			});
+			FB.api('/me/apprequests', function(response) {
+				if(response && !response.error){
+					//console.log('nbrMessage='+response.length);
+					document.getElementById("ShapeDiceRolling").retourFBrequests(response);
+				}
+			});
+		}
+//CHECK PAYMENT================================================================================
+		
+//GET INVITABLE AMIS===========================================================================
+		function getFBinvitableFriendList(){
+			//console.log('getInvitableFriendList');
+			FB.api('v2.0/me/invitable_friends', function(response) {
+				document.getElementById("ShapeDiceRolling").retourFBinvitableFriends(response);
+			});
+		}
+//ENVOIE MESSAGE================================================================================
+		function sendFBmessage(objMessage){
+			//console.log('sendFBmessage');
+			FB.ui({
+				display:'iframe',
+				
+				method: objMessage.method,
+				message: objMessage.message,
+				data: objMessage.data,
+				action_type:objMessage.action_type,
+				object_id:objMessage.object_id,
+				to: objMessage.friend_ids,
+				
+				name: "Shape Dice Rolling",
+				picture: objMessage.picture,
+				caption: objMessage.caption,
+				description: objMessage.description,
+				link: 'https://apps.facebook.com/1467818153434802/',
+				actions:[{name:'BlackMountainStudio.fr', link:'http://www.blackmountainstudio.fr'}]
+				
+			},function(response){
+				if(response===undefined){response={post_id:null};};
+				document.getElementById("ShapeDiceRolling").retourFBmessage(response);
+			});
+		}
+//SUPRIMER REQUETTE=============================================================================
+		function deleteRequest(objRequest){
+			//console.log('deleteRequest');
+			for(var r=0;r<objRequest.length;r++){
+				FB.api(''+objRequest[r],'delete',function (response) {/*remove true;*/});
+			}
+		}
+//PAYMENT========================================================================================
+	//recuperer valeur coin-------------------------------------------------------------------
+		function dCoinFBvaleur() {
+			//console.log('getCoinPrice');
+			FB . api ( '/me/?fields=currency' ,  function ( data )  { 
+				if  ( data && !data . error )  {
+					FB.api(""+715547351860691+"", function(response){
+						if (response && !response.error) {
+							if (response.data && response.data.price) {
+								for(var p=0;p< response.data.price.length;p++){
+									if(response.data.price[p].currency===data.currency.user_currency){
+										var userCurrency=new Object;
+										userCurrency.currency=response.data.price[p].currency;
+										userCurrency.price=response.data.price[p].amount;
+										document.getElementById("ShapeDiceRolling").retourFBvaleur(userCurrency);
+									}
+								}
+							}
+						}
+					});
+				}
+			});
+		}
+	//payment--------------------------------------------------------------------------------
+		function dCoinFBachat(objPayment){
+			//console.log('payment',objPayment);
+			FB . ui ({ 
+				method :  'pay' , 
+				action :  'purchaseitem' , 
+				product : 'https://www.blackmountainstudio.fr/ShapeDiceRolling/coin.html' , 
+				request_id : objPayment.id , 
+				quantity : objPayment.nbrCoin
+			},function(response){
+				response.idRequest = objPayment.id;
+				document.getElementById("ShapeDiceRolling").retourFBachat(response);
+			}); 
+		}
+//REDIRECTION====================================================================================
+		function RedirectionPage(){
+			//console.log('redirect_appcenter');
+			var url = document.URL + "&output=embed";
+			top.location.replace(url);
+			top.location.href="https://www.facebook.com/appcenter/shape_dice_rolling";
+		}
+		function connectFB(){
+			//console.log('redirect_FBconnection');
+			var url = document.URL + "&output=embed";
+			top.location.replace(url);
+			top.location.href="https://apps.facebook.com/login.php?next=https://apps.facebook.com/1467818153434802/"; 
+		}
+	</script>
+
+	<style>
+		html, body { height:100%; overflow:hidden; }
+		body { margin:0; }
+	</style>
+	
+</head>
+
+<body>
+	<div id="fb-root"></div>
+	<div id="altContent">
+		<h1>ShapeDiceRolling</h1>
+		<p><a href="http://www.adobe.com/go/getflashplayer">Get Adobe Flash player</a></p>
+	</div>
+</body>
+</html>
